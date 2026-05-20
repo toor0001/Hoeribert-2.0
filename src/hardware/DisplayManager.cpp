@@ -169,6 +169,40 @@ bool DisplayManager::showFolderImage(uint8_t folder) {
   return true;
 }
 
+void DisplayManager::showBookmarkStatus(bool hasBookmark, uint8_t track, uint16_t seconds) {
+  if (!enabled) return;
+
+  constexpr int infoX = 18;
+  constexpr int infoY = 204;
+  constexpr int infoWidth = 286;
+  constexpr int infoHeight = 18;
+
+  tft.fillRect(infoX, infoY, infoWidth, infoHeight, ILI9341_BLACK);
+  tft.setTextSize(1);
+  tft.setCursor(infoX, infoY + 4);
+
+  if (!hasBookmark) {
+    tft.setTextColor(ILI9341_LIGHTGREY, ILI9341_BLACK);
+    tft.print("Bookmark: keines");
+    return;
+  }
+
+  uint16_t minutes = seconds / 60;
+  uint8_t restSeconds = seconds % 60;
+  String text = "Bookmark: Datei ";
+  if (track < 10) text += "00";
+  else if (track < 100) text += "0";
+  text += String(track);
+  text += " bei ";
+  text += String(minutes);
+  text += ":";
+  if (restSeconds < 10) text += "0";
+  text += String(restSeconds);
+
+  tft.setTextColor(ILI9341_CYAN, ILI9341_BLACK);
+  tft.print(text);
+}
+
 void DisplayManager::showCardProblem(const String& text) {
   if (!enabled) return;
 

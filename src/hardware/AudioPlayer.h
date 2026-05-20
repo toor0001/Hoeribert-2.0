@@ -11,6 +11,13 @@ struct AudioPlayerStatus {
   int fileCount = 0;
 };
 
+struct PlaybackPosition {
+  bool valid = false;
+  uint8_t folder = 0;
+  uint8_t track = 0;
+  uint16_t seconds = 0;
+};
+
 class AudioPlayer {
 public:
   bool begin();
@@ -19,6 +26,8 @@ public:
   bool isPlayingNow() const;
   void playFolder(uint8_t folder);
   void playFolderTrack(uint8_t folder, uint8_t track);
+  PlaybackPosition getPlaybackPosition() const;
+  bool consumeFolderFinished();
   void stop();
   void pause();
   void resume();
@@ -37,11 +46,15 @@ private:
   bool ready = false;
   bool playing = false;
   bool folderPlaybackActive = false;
+  bool folderFinished = false;
   uint8_t currentFolder = 0;
   uint8_t currentTrack = 0;
   int tracksInFolder = 0;
+  unsigned long trackStartedAt = 0;
+  uint16_t trackElapsedBeforePause = 0;
   String statusText = "DFPlayer nicht gestartet";
 
   void startFolderTrack(uint8_t folder, uint8_t track);
+  uint16_t currentTrackSeconds() const;
   void handlePlayFinished();
 };

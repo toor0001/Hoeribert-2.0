@@ -13,6 +13,7 @@ public:
   void showFolderPlaying(uint8_t folder);
   void showFolderPlaying(uint8_t folder, const String& title);
   bool showFolderImage(uint8_t folder);
+  void showBookmarkStatus(bool hasBookmark, uint8_t track = 0, uint16_t seconds = 0);
   void showCardProblem(const String& text);
   void showSleepTimerRemaining(unsigned long remainingSeconds);
   void clearSleepTimer();

@@ -7,9 +7,12 @@ bool AudioPlayer::begin() {
   ready = dfPlayer.begin(dfSerial);
   playing = false;
   folderPlaybackActive = false;
+  folderFinished = false;
   currentFolder = 0;
   currentTrack = 0;
   tracksInFolder = 0;
+  trackStartedAt = 0;
+  trackElapsedBeforePause = 0;
   statusText = ready ? "DFPlayer bereit." : "DFPlayer NICHT gefunden!";
 
   return ready;
@@ -45,6 +48,7 @@ bool AudioPlayer::isPlayingNow() const {
 void AudioPlayer::playFolder(uint8_t folder) {
   if (!ready) return;
 
+  folderFinished = false;
   tracksInFolder = dfPlayer.readFileCountsInFolder(folder);
   if (tracksInFolder < 1) {
     tracksInFolder = 0;
@@ -57,6 +61,7 @@ void AudioPlayer::playFolder(uint8_t folder) {
 void AudioPlayer::playFolderTrack(uint8_t folder, uint8_t track) {
   if (!ready) return;
 
+  folderFinished = false;
   tracksInFolder = dfPlayer.readFileCountsInFolder(folder);
   if (tracksInFolder < 1) {
     tracksInFolder = 0;
@@ -66,19 +71,43 @@ void AudioPlayer::playFolderTrack(uint8_t folder, uint8_t track) {
   startFolderTrack(folder, track);
 }
 
+PlaybackPosition AudioPlayer::getPlaybackPosition() const {
+  PlaybackPosition position;
+
+  if (currentFolder == 0 || currentTrack == 0) {
+    return position;
+  }
+
+  position.valid = true;
+  position.folder = currentFolder;
+  position.track = currentTrack;
+  position.seconds = currentTrackSeconds();
+  return position;
+}
+
+bool AudioPlayer::consumeFolderFinished() {
+  bool finished = folderFinished;
+  folderFinished = false;
+  return finished;
+}
+
 void AudioPlayer::stop() {
   if (!ready) return;
 
   dfPlayer.stop();
   playing = false;
   folderPlaybackActive = false;
+  folderFinished = false;
   currentFolder = 0;
   currentTrack = 0;
+  trackStartedAt = 0;
+  trackElapsedBeforePause = 0;
 }
 
 void AudioPlayer::pause() {
   if (!ready) return;
 
+  trackElapsedBeforePause = currentTrackSeconds();
   dfPlayer.pause();
   playing = false;
 }
@@ -88,6 +117,7 @@ void AudioPlayer::resume() {
 
   dfPlayer.start();
   playing = true;
+  trackStartedAt = millis();
 }
 
 void AudioPlayer::next() {
@@ -105,6 +135,8 @@ void AudioPlayer::next() {
 
   dfPlayer.next();
   playing = true;
+  trackStartedAt = millis();
+  trackElapsedBeforePause = 0;
 }
 
 void AudioPlayer::previous() {
@@ -117,6 +149,8 @@ void AudioPlayer::previous() {
 
   dfPlayer.previous();
   playing = true;
+  trackStartedAt = millis();
+  trackElapsedBeforePause = 0;
 }
 
 void AudioPlayer::setVolume(uint8_t volume) {
@@ -149,7 +183,20 @@ void AudioPlayer::startFolderTrack(uint8_t folder, uint8_t track) {
   currentFolder = folder;
   currentTrack = track;
   playing = true;
+  folderFinished = false;
+  trackStartedAt = millis();
+  trackElapsedBeforePause = 0;
   statusText = "Ordner " + String(folder) + " Track " + String(track);
+}
+
+uint16_t AudioPlayer::currentTrackSeconds() const {
+  uint32_t seconds = trackElapsedBeforePause;
+
+  if (playing && trackStartedAt > 0) {
+    seconds += (millis() - trackStartedAt) / 1000UL;
+  }
+
+  return seconds > 65535UL ? 65535 : static_cast<uint16_t>(seconds);
 }
 
 void AudioPlayer::handlePlayFinished() {
@@ -170,5 +217,8 @@ void AudioPlayer::handlePlayFinished() {
 
   playing = false;
   folderPlaybackActive = false;
+  folderFinished = true;
+  trackStartedAt = 0;
+  trackElapsedBeforePause = 0;
   statusText = "Ordner " + String(currentFolder) + " beendet";
 }
