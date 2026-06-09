@@ -10,10 +10,6 @@ struct TonuinoCardData {
   uint8_t mode = 0;
   uint8_t special = 0;
   uint8_t special2 = 0;
-  bool bookmarkValid = false;
-  uint8_t bookmarkFolder = 0;
-  uint8_t bookmarkTrack = 0;
-  uint16_t bookmarkSeconds = 0;
   String uid = "";
   String cardType = "";
 };
@@ -37,8 +33,6 @@ public:
   String getLastError() const;
   bool hasLastRawData() const;
   void copyLastRawData(byte* data, size_t maxLength) const;
-  bool writeBookmark(const CardBookmark& bookmark);
-  bool clearBookmark();
   int getDebugLineCount() const;
   String getDebugLine(int index) const;
 
@@ -52,15 +46,10 @@ private:
   static constexpr int BUFFER_LENGTH = 18;
   static constexpr int MAX_DEBUG_LINES = 16;
 
-  bool selectCard();
+  bool selectCard(uint8_t attempts = 1);
   bool readTonuinoRawData(byte* data);
-  bool writeTonuinoRawData(const byte* data);
   bool authenticateClassicBlock(byte blockAddr, byte trailerBlock);
   TonuinoCardData decodeTonuinoCard(const byte* data) const;
-  CardBookmark decodeBookmark(const byte* data, uint8_t expectedFolder) const;
-  void encodeBookmark(byte* data, const CardBookmark& bookmark) const;
-  void clearBookmarkBytes(byte* data) const;
-  byte bookmarkChecksum(const byte* data) const;
   String uidToString(MFRC522::Uid* uid) const;
   void clearDebugLines();
   void addDebugLine(const String& line);

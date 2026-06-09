@@ -139,10 +139,6 @@ void DisplayManager::showFolderPlaying(uint8_t folder, const String& title) {
     }
   }
 
-  tft.setTextColor(ILI9341_LIGHTGREY, ILI9341_BLACK);
-  tft.setTextSize(1);
-  tft.setCursor(18, 176);
-  tft.println("BTN_B: Anzeige an/aus");
 }
 
 bool DisplayManager::showFolderImage(uint8_t folder) {
@@ -173,23 +169,27 @@ void DisplayManager::showBookmarkStatus(bool hasBookmark, uint8_t track, uint16_
   if (!enabled) return;
 
   constexpr int infoX = 18;
-  constexpr int infoY = 204;
+  constexpr int infoY = 172;
   constexpr int infoWidth = 286;
-  constexpr int infoHeight = 18;
+  constexpr int infoHeight = 48;
+  constexpr int lineHeight = 20;
 
   tft.fillRect(infoX, infoY, infoWidth, infoHeight, ILI9341_BLACK);
-  tft.setTextSize(1);
-  tft.setCursor(infoX, infoY + 4);
+  tft.setTextSize(2);
+  tft.setCursor(infoX, infoY);
+  tft.setTextColor(ILI9341_LIGHTGREY, ILI9341_BLACK);
+  tft.print("Bookmark:");
 
   if (!hasBookmark) {
+    tft.setCursor(infoX, infoY + lineHeight);
     tft.setTextColor(ILI9341_LIGHTGREY, ILI9341_BLACK);
-    tft.print("Bookmark: keines");
+    tft.print("keines");
     return;
   }
 
   uint16_t minutes = seconds / 60;
   uint8_t restSeconds = seconds % 60;
-  String text = "Bookmark: Datei ";
+  String text = "Datei ";
   if (track < 10) text += "00";
   else if (track < 100) text += "0";
   text += String(track);
@@ -200,7 +200,33 @@ void DisplayManager::showBookmarkStatus(bool hasBookmark, uint8_t track, uint16_
   text += String(restSeconds);
 
   tft.setTextColor(ILI9341_CYAN, ILI9341_BLACK);
+  tft.setCursor(infoX, infoY + lineHeight);
   tft.print(text);
+}
+
+void DisplayManager::showNotification(const String& title, const String& detail) {
+  if (!enabled) return;
+
+  clear();
+  tft.fillRect(0, 0, tft.width(), 34, ILI9341_DARKGREEN);
+  tft.setTextColor(ILI9341_WHITE, ILI9341_DARKGREEN);
+  tft.setTextSize(2);
+  tft.setCursor(10, 9);
+  tft.println("OK");
+
+  tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
+  tft.setTextSize(3);
+  tft.setCursor(18, 78);
+  tft.println(title);
+
+  if (detail.length() == 0) {
+    return;
+  }
+
+  tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+  tft.setTextSize(2);
+  tft.setCursor(18, 138);
+  tft.println(detail);
 }
 
 void DisplayManager::showCardProblem(const String& text) {

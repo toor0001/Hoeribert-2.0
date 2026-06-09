@@ -6,6 +6,7 @@
 #include "hardware/RFIDManager.h"
 
 #include <Arduino.h>
+#include <Preferences.h>
 #include <WiFi.h>
 #include <math.h>
 
@@ -125,6 +126,7 @@ DisplayManager display;
 ButtonBoard buttonBoard;
 RFIDManager rfidManager;
 AudioPlayer audioPlayer;
+Preferences bookmarkPrefs;
 
 uint8_t currentFolder = 0;
 int lastVolume = -1;
@@ -137,7 +139,9 @@ uint16_t activeBookmarkSeconds = 0;
 unsigned long sleepTimerEndsAt = 0;
 unsigned long lastSleepTimerDrawnSecond = 0;
 unsigned long lastButtonAPressedAt = 0;
+unsigned long notificationEndsAt = 0;
 constexpr unsigned long DOUBLE_CLICK_MS = 450;
+constexpr unsigned long NOTIFICATION_MS = 3000;
 
 int readAverageRaw() {
   long sum = 0;
@@ -238,6 +242,49 @@ void clearSleepTimer() {
   Serial.println("[NORMAL] Sleep Timer geloescht");
 }
 
+String formatTrack(uint8_t track) {
+  String text = "";
+  if (track < 10) text += "00";
+  else if (track < 100) text += "0";
+  text += String(track);
+  return text;
+}
+
+String formatTime(uint16_t seconds) {
+  uint16_t minutes = seconds / 60;
+  uint8_t restSeconds = seconds % 60;
+  String text = String(minutes) + ":";
+  if (restSeconds < 10) text += "0";
+  text += String(restSeconds);
+  return text;
+}
+
+void showTemporaryNotification(const String& title, const String& detail = "") {
+  notificationEndsAt = millis() + NOTIFICATION_MS;
+  display.showNotification(title, detail);
+}
+
+void showBookmarkError(const String& detail) {
+  showTemporaryNotification("FEHLER", detail.length() > 0 ? detail : "Bookmark");
+}
+
+bool notificationActive() {
+  return notificationEndsAt > 0 && static_cast<long>(notificationEndsAt - millis()) > 0;
+}
+
+void updateTemporaryNotification() {
+  if (notificationEndsAt == 0) {
+    return;
+  }
+
+  if (static_cast<long>(notificationEndsAt - millis()) > 0) {
+    return;
+  }
+
+  notificationEndsAt = 0;
+  redrawNormalDisplay();
+}
+
 void rememberDisplayedBookmark(bool valid, uint8_t track, uint16_t seconds) {
   activeBookmarkValid = valid;
   activeBookmarkTrack = valid ? track : 0;
@@ -248,10 +295,71 @@ void rememberDisplayedBookmark(bool valid, uint8_t track, uint16_t seconds) {
   }
 }
 
+String bookmarkStorageKey(const String& uid) {
+  uint32_t hash = 2166136261UL;
+
+  for (int i = 0; i < uid.length(); i++) {
+    hash ^= static_cast<uint8_t>(uid.charAt(i));
+    hash *= 16777619UL;
+  }
+
+  String key = "bm";
+  key += String(hash, HEX);
+  return key;
+}
+
+uint32_t encodeStoredBookmark(const CardBookmark& bookmark) {
+  return (static_cast<uint32_t>(bookmark.folder) << 24) |
+         (static_cast<uint32_t>(bookmark.track) << 16) |
+         bookmark.seconds;
+}
+
+CardBookmark decodeStoredBookmark(uint32_t value) {
+  CardBookmark bookmark;
+  bookmark.folder = (value >> 24) & 0xFF;
+  bookmark.track = (value >> 16) & 0xFF;
+  bookmark.seconds = value & 0xFFFF;
+  bookmark.valid = bookmark.folder != 0 && bookmark.track != 0;
+  return bookmark;
+}
+
+bool loadLocalBookmark(const String& uid, uint8_t folder, CardBookmark& bookmark) {
+  uint32_t value = bookmarkPrefs.getULong(bookmarkStorageKey(uid).c_str(), 0);
+  if (value == 0) {
+    return false;
+  }
+
+  bookmark = decodeStoredBookmark(value);
+  if (!bookmark.valid || bookmark.folder != folder) {
+    bookmark = CardBookmark{};
+    return false;
+  }
+
+  return true;
+}
+
+void saveLocalBookmark(const String& uid, const CardBookmark& bookmark) {
+  if (uid == "" || !bookmark.valid) {
+    return;
+  }
+
+  bookmarkPrefs.putULong(bookmarkStorageKey(uid).c_str(), encodeStoredBookmark(bookmark));
+  Serial.println("[NORMAL] Bookmark lokal gespeichert fuer UID " + uid);
+}
+
+void clearLocalBookmark(const String& uid) {
+  if (uid == "") {
+    return;
+  }
+
+  bookmarkPrefs.remove(bookmarkStorageKey(uid).c_str());
+  Serial.println("[NORMAL] Bookmark lokal geloescht fuer UID " + uid);
+}
+
 bool writeCurrentBookmark(const char* reason) {
   PlaybackPosition position = audioPlayer.getPlaybackPosition();
-  if (!position.valid || position.folder == 0 || position.track == 0) {
-    Serial.println("[NORMAL] Bookmark ignoriert: keine Position");
+  if (!position.valid || position.folder == 0 || position.track == 0 || activeCardUid == "") {
+    Serial.println("[NORMAL] Bookmark ignoriert: keine Karte/Position");
     return false;
   }
 
@@ -261,29 +369,24 @@ bool writeCurrentBookmark(const char* reason) {
   bookmark.track = position.track;
   bookmark.seconds = position.seconds;
 
-  bool ok = rfidManager.writeBookmark(bookmark);
-  if (ok) {
-    rememberDisplayedBookmark(true, bookmark.track, bookmark.seconds);
-    Serial.println("[NORMAL] Bookmark gespeichert (" + String(reason) + "): Ordner " +
-                   String(bookmark.folder) + " Track " + String(bookmark.track) +
-                   " @" + String(bookmark.seconds) + "s");
-  } else {
-    Serial.println("[NORMAL] Bookmark speichern fehlgeschlagen: " + rfidManager.getLastError());
-  }
-
-  return ok;
+  saveLocalBookmark(activeCardUid, bookmark);
+  rememberDisplayedBookmark(true, bookmark.track, bookmark.seconds);
+  Serial.println("[NORMAL] Bookmark gespeichert (" + String(reason) + "): Ordner " +
+                 String(bookmark.folder) + " Track " + String(bookmark.track) +
+                 " @" + String(bookmark.seconds) + "s");
+  return true;
 }
 
 bool clearCurrentBookmark(const char* reason) {
-  bool ok = rfidManager.clearBookmark();
-  if (ok) {
-    rememberDisplayedBookmark(false, 0, 0);
-    Serial.println("[NORMAL] Bookmark geloescht (" + String(reason) + ")");
-  } else {
-    Serial.println("[NORMAL] Bookmark loeschen fehlgeschlagen: " + rfidManager.getLastError());
+  if (activeCardUid == "") {
+    Serial.println("[NORMAL] Bookmark loeschen ignoriert: keine aktive Karte");
+    return false;
   }
 
-  return ok;
+  clearLocalBookmark(activeCardUid);
+  rememberDisplayedBookmark(false, 0, 0);
+  Serial.println("[NORMAL] Bookmark geloescht (" + String(reason) + ")");
+  return true;
 }
 
 void updateSleepTimer() {
@@ -310,13 +413,20 @@ void updateSleepTimer() {
 
   if (remainingSeconds != lastSleepTimerDrawnSecond) {
     lastSleepTimerDrawnSecond = remainingSeconds;
-    display.showSleepTimerRemaining(remainingSeconds);
+    if (!notificationActive()) {
+      display.showSleepTimerRemaining(remainingSeconds);
+    }
   }
 }
 
 void handleButtons() {
   buttonBoard.update();
   uint16_t newlyPressed = buttonBoard.getNewlyPressed();
+
+  if (newlyPressed != 0) {
+    Serial.println("[NORMAL] Taste: " + buttonBoard.getLastButtonName() +
+                   " mask=0x" + String(newlyPressed, HEX));
+  }
 
   if (newlyPressed & ButtonBoard::BTN_B) {
     bool nextEnabled = !display.isEnabled();
@@ -347,11 +457,22 @@ void handleButtons() {
   }
 
   if (newlyPressed & ButtonBoard::BTN_D) {
-    writeCurrentBookmark("Taste D");
+    if (writeCurrentBookmark("Taste D")) {
+      showTemporaryNotification(
+        "BOOKMARK",
+        "Titel " + formatTrack(activeBookmarkTrack) + "  Zeit " + formatTime(activeBookmarkSeconds)
+      );
+    } else {
+      showBookmarkError("keine Wiedergabe");
+    }
   }
 
   if (newlyPressed & ButtonBoard::BTN_E) {
-    clearCurrentBookmark("Taste E");
+    if (clearCurrentBookmark("Taste E")) {
+      showTemporaryNotification("BOOKMARK", "geloescht");
+    } else {
+      showBookmarkError("keine Karte");
+    }
   }
 
   if (newlyPressed & ButtonBoard::BTN_F) {
@@ -413,13 +534,18 @@ void handleRFID() {
 
   activeCardUid = card.uid;
   currentFolder = card.folder;
-  rememberDisplayedBookmark(card.bookmarkValid, card.bookmarkTrack, card.bookmarkSeconds);
+  CardBookmark localBookmark;
+  bool hasLocalBookmark = loadLocalBookmark(card.uid, card.folder, localBookmark);
+  bool hasBookmark = hasLocalBookmark;
+  uint8_t startTrack = localBookmark.track;
+  uint16_t startSeconds = localBookmark.seconds;
+  rememberDisplayedBookmark(hasBookmark, startTrack, startSeconds);
 
-  if (card.bookmarkValid) {
-    audioPlayer.playFolderTrack(currentFolder, card.bookmarkTrack);
+  if (hasBookmark) {
+    audioPlayer.playFolderTrack(currentFolder, startTrack);
     Serial.println("[NORMAL] Spiele Ordner " + String(currentFolder) +
-                   " ab Bookmark Track " + String(card.bookmarkTrack) +
-                   " @" + String(card.bookmarkSeconds) + "s");
+                   " ab Bookmark Track " + String(startTrack) +
+                   " @" + String(startSeconds) + "s");
   } else {
     audioPlayer.playFolder(currentFolder);
     Serial.println("[NORMAL] Spiele Ordner " + String(currentFolder));
@@ -451,6 +577,7 @@ void NormalMode::begin() {
 
   buttonBoard.begin();
   rfidManager.begin();
+  bookmarkPrefs.begin("bookmarks", false);
   disableWifi();
   analogReadResolution(12);
   analogSetPinAttenuation(VOL_PIN, ADC_11db);
@@ -478,6 +605,7 @@ void NormalMode::update() {
   applyVolume();
   handleRFID();
   updateSleepTimer();
+  updateTemporaryNotification();
 
   delay(20);
 }

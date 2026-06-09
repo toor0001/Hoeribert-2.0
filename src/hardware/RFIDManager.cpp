@@ -2,14 +2,6 @@
 
 #include <SPI.h>
 
-namespace {
-
-constexpr byte BOOKMARK_MAGIC_0 = 'B';
-constexpr byte BOOKMARK_MAGIC_1 = 'M';
-constexpr byte BOOKMARK_VERSION = 1;
-
-} // namespace
-
 void RFIDManager::begin() {
   SPI.begin(RFID_SCK_PIN, RFID_MISO_PIN, RFID_MOSI_PIN, RFID_SS_PIN);
 
@@ -62,72 +54,30 @@ TonuinoCardData RFIDManager::readTonuinoCard() const {
   return lastTonuinoCard;
 }
 
-bool RFIDManager::writeBookmark(const CardBookmark& bookmark) {
-  clearDebugLines();
-  lastError = "";
-
-  if (!bookmark.valid || bookmark.folder == 0 || bookmark.track == 0) {
-    lastError = "Bookmark ungueltig";
-    return false;
+bool RFIDManager::selectCard(uint8_t attempts) {
+  if (attempts == 0) {
+    attempts = 1;
   }
 
-  byte data[BUFFER_LENGTH] = {};
+  rfid.PCD_StopCrypto1();
 
-  if (!selectCard()) {
-    lastError = "Keine Karte zum Schreiben";
-    return false;
-  }
-
-  bool ok = readTonuinoRawData(data);
-  if (ok) {
-    TonuinoCardData card = decodeTonuinoCard(data);
-    if (!card.valid || card.folder != bookmark.folder) {
-      lastError = "Bookmark passt nicht zur Karte";
-      ok = false;
-    } else {
-      encodeBookmark(data, bookmark);
-      ok = writeTonuinoRawData(data);
+  for (uint8_t attempt = 0; attempt < attempts; attempt++) {
+    if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+      return true;
     }
+
+    byte atqa[2];
+    byte atqaSize = sizeof(atqa);
+    MFRC522::StatusCode status = rfid.PICC_WakeupA(atqa, &atqaSize);
+    if (status == MFRC522::STATUS_OK && rfid.PICC_ReadCardSerial()) {
+      return true;
+    }
+
+    lastError = String(rfid.GetStatusCodeName(status));
+    delay(10);
   }
 
-  finishCard();
-  return ok;
-}
-
-bool RFIDManager::clearBookmark() {
-  clearDebugLines();
-  lastError = "";
-
-  byte data[BUFFER_LENGTH] = {};
-
-  if (!selectCard()) {
-    lastError = "Keine Karte zum Schreiben";
-    return false;
-  }
-
-  bool ok = readTonuinoRawData(data);
-  if (ok) {
-    clearBookmarkBytes(data);
-    ok = writeTonuinoRawData(data);
-  }
-
-  finishCard();
-  return ok;
-}
-
-bool RFIDManager::selectCard() {
-  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
-    return true;
-  }
-
-  byte atqa[2];
-  byte atqaSize = sizeof(atqa);
-  MFRC522::StatusCode status = rfid.PICC_WakeupA(atqa, &atqaSize);
-  if (status != MFRC522::STATUS_OK) {
-    return false;
-  }
-
-  return rfid.PICC_ReadCardSerial();
+  return false;
 }
 
 bool RFIDManager::readTonuinoRawData(byte* data) {
@@ -204,58 +154,6 @@ bool RFIDManager::readTonuinoRawData(byte* data) {
   return false;
 }
 
-bool RFIDManager::writeTonuinoRawData(const byte* data) {
-  MFRC522::PICC_Type piccType = rfid.PICC_GetType(rfid.uid.sak);
-
-  if (
-    piccType == MFRC522::PICC_TYPE_MIFARE_1K ||
-    piccType == MFRC522::PICC_TYPE_MIFARE_4K
-  ) {
-    byte blockAddr = 4;
-    byte trailerBlock = 7;
-
-    if (!authenticateClassicBlock(blockAddr, trailerBlock)) {
-      return false;
-    }
-
-    byte block[RAW_DATA_LENGTH];
-    memcpy(block, data, RAW_DATA_LENGTH);
-    MFRC522::StatusCode status = rfid.MIFARE_Write(blockAddr, block, RAW_DATA_LENGTH);
-
-    if (status != MFRC522::STATUS_OK) {
-      lastError = String(rfid.GetStatusCodeName(status));
-      addDebugLine("[RFID] Classic Write Fehler");
-      addDebugLine(lastError);
-      return false;
-    }
-
-    addDebugLine("[RFID] Classic Write OK");
-    return true;
-  }
-
-  if (piccType == MFRC522::PICC_TYPE_MIFARE_UL) {
-    for (byte page = 10; page <= 11; page++) {
-      byte pageData[4];
-      memcpy(pageData, data + (page - 8) * 4, sizeof(pageData));
-
-      MFRC522::StatusCode status = rfid.MIFARE_Write(page, pageData, sizeof(pageData));
-      if (status != MFRC522::STATUS_OK) {
-        lastError = String(rfid.GetStatusCodeName(status));
-        addDebugLine("[RFID] UL Write Fehler p" + String(page));
-        addDebugLine(lastError);
-        return false;
-      }
-    }
-
-    addDebugLine("[RFID] UL Write OK");
-    return true;
-  }
-
-  lastError = "Unsupported Tag Type";
-  addDebugLine("[RFID] Unsupported Tag Type");
-  return false;
-}
-
 bool RFIDManager::authenticateClassicBlock(byte blockAddr, byte trailerBlock) {
   struct AuthAttempt {
     byte command;
@@ -312,64 +210,9 @@ TonuinoCardData RFIDManager::decodeTonuinoCard(const byte* data) const {
   card.mode = data[6];
   card.special = data[7];
   card.special2 = data[8];
-  CardBookmark bookmark = decodeBookmark(data, card.folder);
-  card.bookmarkValid = bookmark.valid;
-  card.bookmarkFolder = bookmark.folder;
-  card.bookmarkTrack = bookmark.track;
-  card.bookmarkSeconds = bookmark.seconds;
   card.valid = card.folder != 0 && card.mode != 0;
 
   return card;
-}
-
-CardBookmark RFIDManager::decodeBookmark(const byte* data, uint8_t expectedFolder) const {
-  CardBookmark bookmark;
-
-  if (data[9] != BOOKMARK_MAGIC_0 ||
-      data[10] != BOOKMARK_MAGIC_1 ||
-      data[11] != BOOKMARK_VERSION ||
-      data[15] != bookmarkChecksum(data)) {
-    return bookmark;
-  }
-
-  uint8_t track = data[12];
-  uint16_t seconds = (static_cast<uint16_t>(data[13]) << 8) | data[14];
-
-  if (expectedFolder == 0 || track == 0) {
-    return bookmark;
-  }
-
-  bookmark.valid = true;
-  bookmark.folder = expectedFolder;
-  bookmark.track = track;
-  bookmark.seconds = seconds;
-  return bookmark;
-}
-
-void RFIDManager::encodeBookmark(byte* data, const CardBookmark& bookmark) const {
-  data[9] = BOOKMARK_MAGIC_0;
-  data[10] = BOOKMARK_MAGIC_1;
-  data[11] = BOOKMARK_VERSION;
-  data[12] = bookmark.track;
-  data[13] = static_cast<byte>(bookmark.seconds >> 8);
-  data[14] = static_cast<byte>(bookmark.seconds);
-  data[15] = bookmarkChecksum(data);
-}
-
-void RFIDManager::clearBookmarkBytes(byte* data) const {
-  for (int i = 9; i < RAW_DATA_LENGTH; i++) {
-    data[i] = 0;
-  }
-}
-
-byte RFIDManager::bookmarkChecksum(const byte* data) const {
-  byte checksum = 0xA5;
-
-  for (int i = 9; i <= 14; i++) {
-    checksum ^= data[i];
-  }
-
-  return checksum;
 }
 
 String RFIDManager::getLastUid() const {
