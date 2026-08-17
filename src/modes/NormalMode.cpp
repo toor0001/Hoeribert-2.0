@@ -508,7 +508,7 @@ void handleRFID() {
     return;
   }
 
-  TonuinoCardData card = rfidManager.readTonuinoCard();
+  RfidCardData card = rfidManager.readRfidCard();
 
   if (!card.valid) {
     display.showCardProblem("NICHT LESBAR");

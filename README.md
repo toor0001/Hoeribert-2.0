@@ -1,8 +1,10 @@
 # Höribert 2.0
 
-Höribert 2.0 ist ein eigenständiger, ESP32-basierter Hörspiel- und Audioplayer in der Hardware und mit dem Bedienkonzept eines NOXON-Geräts. RFID-Karten wählen Hörspielordner aus, ein DFPlayer Mini übernimmt die Audiowiedergabe und ein ILI9341-TFT zeigt Status oder Cover an. Die vorhandene NOXON-Tastenplatine und der analoge Lautstärkeregler werden weiterverwendet.
+<p align="center">
+  <img src="docs/images/hoeribert.PNG" alt="Höribert 2.0" width="800">
+</p>
 
-![Innenraum des Höribert 2.0 mit Lautsprecher und Elektronik](docs/images/hoeribert-innenraum.jpg)
+Höribert 2.0 ist ein eigenständiger, ESP32-basierter Hörspiel- und Audioplayer in der Hardware und mit dem Bedienkonzept eines NOXON-Geräts. RFID-Karten wählen Hörspielordner aus, ein DFPlayer Mini übernimmt die Audiowiedergabe und ein ILI9341-TFT zeigt Status oder Cover an. Die vorhandene NOXON-Tastenplatine und der analoge Lautstärkeregler werden weiterverwendet.
 
 ## Funktionen
 
@@ -82,8 +84,6 @@ NOXON-Tasten
 `ButtonBoard::update()` vergleicht diesen Status mit dem Wert des vorherigen Durchlaufs. Der Ausdruck `currentState & ~lastState` enthält nur Bits, die jetzt gesetzt waren, im vorherigen Zustand aber noch nicht. Dadurch reagiert die Bedienlogik auf neu gedrückte Tasten und nicht in jedem Programmdurchlauf erneut auf eine gehaltene Taste. Eine separate zeitbasierte Entprellung besitzt der aktuelle Code nicht.
 
 Von den 16 möglichen Eingängen sind 14 den internen Projektbezeichnungen A bis N zugeordnet. Die physische NOXON-Beschriftung ist im aktuellen Repository nicht eindeutig abgebildet; deshalb verwendet die Dokumentation bewusst diese internen Namen.
-
-![Elektronik und NOXON-Tastenplatine im Höribert 2.0](docs/images/hoeribert-elektronik.jpg)
 
 | Interne Taste | Bit | Maske |
 | --- | ---: | ---: |
@@ -219,17 +219,6 @@ pio run -e esp32dev -t upload --upload-port <IP-ADRESSE>
 
 Im Normalbetrieb wird WLAN bewusst abgeschaltet. Ein dort gestartetes Gerät ist daher nicht per OTA erreichbar.
 
-## Fehlerbehebung
-
-- **`secrets.h: No such file or directory`:** `include/secrets.example.h` nach `include/secrets.h` kopieren und lokale Werte eintragen.
-- **DFPlayer reagiert nicht:** UART-Verdrahtung, gemeinsame Masse, Versorgung, Serienwiderstand zum DFPlayer-RX und microSD-Struktur prüfen.
-- **Tracks werden falsch zugeordnet:** Ordner- und Dateinamen sowie versteckte Dateien auf der microSD-Karte kontrollieren.
-- **RFID wird nicht gelesen:** 3,3-V-Versorgung, SS/RST/SPI-Leitungen und unterstützten Kartentyp prüfen.
-- **OTA nicht erreichbar:** mit gedrückter Taste J booten, WLAN-Ausgabe kontrollieren und gegebenenfalls die angezeigte IP verwenden.
-- **Kein serieller Port:** USB-Kabel, Treiber und `upload_port` beziehungsweise den erkannten PlatformIO-Port prüfen.
-- **Cover fehlt:** Dateiname unter `data/` und separaten LittleFS-Upload kontrollieren.
-- **Lautstärke schwankt:** Potentiometer, Masseführung und ADC-Leitung prüfen; die Firmware mittelt und filtert bereits mehrere Messwerte.
-
 ## Projektstruktur
 
 ```text
@@ -242,10 +231,21 @@ test/         PlatformIO-Tests, sofern künftig ergänzt
 
 ## Credits / Herkunft
 
-Das RFID-Kartenformat und die grundlegende Idee der kartengesteuerten Ordnerwahl wurden durch das [TonUINO-Projekt](https://github.com/tonuino/TonUINO-TNG) von Thorsten Voß und der TonUINO-Community inspiriert. Die aktuelle Höribert-Firmware besitzt eine eigenständige ESP32-/NOXON-Architektur; in der erreichbaren Projekthistorie wurde kein direkt übernommener TonUINO-Quellcode gefunden.
+Höribert 2.0 ist eine eigenständige ESP32-/NOXON-Implementierung. Das kompatible RFID-Kartenformat und die grundlegende Idee der kartengesteuerten Ordnerwahl gehen auf das historische [TonUINO-Projekt](https://github.com/tonuino/TonUINO) von Thorsten Voß zurück. Das heutige Community-Projekt wird als [TonUINO-TNG](https://github.com/tonuino/TonUINO-TNG) weiterentwickelt. In der bereinigten, erreichbaren Git-Historie dieses Repositorys befindet sich kein direkt übernommener TonUINO-Quellcode.
 
 Die über PlatformIO eingebundenen Bibliotheken, darunter DFRobotDFPlayerMini, MFRC522, Adafruit GFX/ILI9341, IRremote und TJpg_Decoder, unterliegen jeweils ihren eigenen Lizenzen. Lokal verwendete Coverbilder sind nicht Bestandteil des Projekts oder seiner Lizenz.
+
+## Entwicklung
+
+Bei Analyse, Refactoring, Fehlersuche und Dokumentation kamen ChatGPT und OpenAI Codex als KI-gestützte Entwicklungswerkzeuge zum Einsatz. Konzept, Hardwareaufbau, Anforderungen, Integration und Tests am realen Gerät stammen vom Projektbetreiber.
 
 ## Lizenz
 
 Der eigenständige Projektcode und die beiden Projektdokumentationsfotos stehen unter der [MIT-Lizenz](LICENSE). Lizenzen externer Bibliotheken und lokal verwendeter Medien bleiben davon unberührt.
+
+## Einblicke ins Gerät
+
+<p align="center">
+  <img src="docs/images/hoeribert-innenraum.jpg" alt="Innenraum des Höribert 2.0 mit Lautsprecher und Elektronik" width="45%">
+  <img src="docs/images/hoeribert-elektronik.jpg" alt="Elektronik und NOXON-Tastenplatine im Höribert 2.0" width="45%">
+</p>

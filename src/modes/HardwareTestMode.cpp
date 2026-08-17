@@ -32,7 +32,7 @@ RFIDManager rfidManager;
 int lastVolume = -1;
 int filteredVolumeRaw = -1;
 
-String tonuinoModeToString(byte mode);
+String cardModeToString(byte mode);
 
 void logLine(const String& msg) {
   display.logLine(msg);
@@ -192,26 +192,26 @@ void handleRFID() {
   logLine(rfidManager.getLastCardType());
 
   if (rfidManager.hasLastRawData()) {
-    TonuinoCardData card = rfidManager.readTonuinoCard();
+    RfidCardData card = rfidManager.readRfidCard();
 
-    logLine("[TONUINO] RAW:");
+    logLine("[RFID] RAW:");
     logLine(rfidManager.getLastRawData());
 
     if (card.valid) {
-      logLine("[TONUINO] Karte bekannt");
-      logLine("[TONUINO] Version: " + String(card.version));
-      logLine("[TONUINO] Ordner: " + String(card.folder));
-      logLine("[TONUINO] Modus: " + tonuinoModeToString(card.mode));
-      logLine("[TONUINO] Special: " + String(card.special) + "/" + String(card.special2));
+      logLine("[RFID] Karte bekannt");
+      logLine("[RFID] Version: " + String(card.version));
+      logLine("[RFID] Ordner: " + String(card.folder));
+      logLine("[RFID] Modus: " + cardModeToString(card.mode));
+      logLine("[RFID] Special: " + String(card.special) + "/" + String(card.special2));
 
       if (card.mode != 2) {
-        logLine("[TONUINO] Hinweis: NormalMode nutzt nur Album");
+        logLine("[RFID] Hinweis: NormalMode nutzt nur Album");
       }
 
       currentFolder = card.folder;
     } else {
-      logLine("[TONUINO] Keine TonUINO-Karte");
-      logLine("[TONUINO] Block 4 Cookie falsch");
+      logLine("[RFID] Keine kompatible Karte");
+      logLine("[RFID] Block 4 Cookie falsch");
     }
   }
 
@@ -220,7 +220,7 @@ void handleRFID() {
   }
 }
 
-String tonuinoModeToString(byte mode) {
+String cardModeToString(byte mode) {
   switch (mode) {
     case 1: return "Hoerspiel: zufaellige Datei";
     case 2: return "Album: ganzer Ordner";

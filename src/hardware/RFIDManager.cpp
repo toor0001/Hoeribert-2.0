@@ -16,7 +16,7 @@ bool RFIDManager::update() {
   lastError = "";
   lastRawData = "";
   lastRawDataAvailable = false;
-  lastTonuinoCard = TonuinoCardData{};
+  lastCardData = RfidCardData{};
   cardPresent = false;
 
   if (!selectCard()) return false;
@@ -38,8 +38,8 @@ bool RFIDManager::update() {
   lastReportedUid = uid;
   lastUidTime = now;
 
-  if (readTonuinoRawData(lastRawBytes)) {
-    lastTonuinoCard = decodeTonuinoCard(lastRawBytes);
+  if (readCardRawData(lastRawBytes)) {
+    lastCardData = decodeCardData(lastRawBytes);
   }
 
   finishCard();
@@ -50,8 +50,8 @@ bool RFIDManager::isCardPresent() const {
   return cardPresent;
 }
 
-TonuinoCardData RFIDManager::readTonuinoCard() const {
-  return lastTonuinoCard;
+RfidCardData RFIDManager::readRfidCard() const {
+  return lastCardData;
 }
 
 bool RFIDManager::selectCard(uint8_t attempts) {
@@ -80,7 +80,7 @@ bool RFIDManager::selectCard(uint8_t attempts) {
   return false;
 }
 
-bool RFIDManager::readTonuinoRawData(byte* data) {
+bool RFIDManager::readCardRawData(byte* data) {
   MFRC522::PICC_Type piccType = rfid.PICC_GetType(rfid.uid.sak);
 
   // ===== MIFARE CLASSIC =====
@@ -190,11 +190,12 @@ bool RFIDManager::authenticateClassicBlock(byte blockAddr, byte trailerBlock) {
   return false;
 }
 
-TonuinoCardData RFIDManager::decodeTonuinoCard(const byte* data) const {
-  TonuinoCardData card;
+RfidCardData RFIDManager::decodeCardData(const byte* data) const {
+  RfidCardData card;
   card.uid = lastUid;
   card.cardType = lastCardType;
 
+  // TonUINO-compatible on-card format: cookie, version, folder, mode, special, special2.
   bool validCookie =
     data[0] == 0x13 &&
     data[1] == 0x37 &&

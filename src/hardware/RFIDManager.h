@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <MFRC522.h>
 
-struct TonuinoCardData {
+struct RfidCardData {
   bool valid = false;
   uint8_t version = 0;
   uint8_t folder = 0;
@@ -26,7 +26,7 @@ public:
   void begin();
   bool update();
   bool isCardPresent() const;
-  TonuinoCardData readTonuinoCard() const;
+  RfidCardData readRfidCard() const;
   String getLastUid() const;
   String getLastCardType() const;
   String getLastRawData() const;
@@ -47,9 +47,9 @@ private:
   static constexpr int MAX_DEBUG_LINES = 16;
 
   bool selectCard(uint8_t attempts = 1);
-  bool readTonuinoRawData(byte* data);
+  bool readCardRawData(byte* data);
   bool authenticateClassicBlock(byte blockAddr, byte trailerBlock);
-  TonuinoCardData decodeTonuinoCard(const byte* data) const;
+  RfidCardData decodeCardData(const byte* data) const;
   String uidToString(MFRC522::Uid* uid) const;
   void clearDebugLines();
   void addDebugLine(const String& line);
@@ -66,7 +66,7 @@ private:
   unsigned long lastUidTime = 0;
   bool cardPresent = false;
   bool lastRawDataAvailable = false;
-  TonuinoCardData lastTonuinoCard;
+  RfidCardData lastCardData;
   byte lastRawBytes[BUFFER_LENGTH] = {};
   String debugLines[MAX_DEBUG_LINES];
   int debugLineCount = 0;
