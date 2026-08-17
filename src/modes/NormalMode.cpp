@@ -542,12 +542,12 @@ void handleRFID() {
   rememberDisplayedBookmark(hasBookmark, startTrack, startSeconds);
 
   if (hasBookmark) {
-    audioPlayer.playFolderTrack(currentFolder, startTrack);
+    audioPlayer.playFolderTrack(currentFolder, startTrack, "BOOKMARK");
     Serial.println("[NORMAL] Spiele Ordner " + String(currentFolder) +
                    " ab Bookmark Track " + String(startTrack) +
                    " @" + String(startSeconds) + "s");
   } else {
-    audioPlayer.playFolder(currentFolder);
+    audioPlayer.playFolder(currentFolder, "RFID");
     Serial.println("[NORMAL] Spiele Ordner " + String(currentFolder));
   }
 

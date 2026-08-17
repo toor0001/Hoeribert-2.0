@@ -88,7 +88,7 @@ void playCurrentFolder() {
 
   // startet Ordner ab Datei 001
   // DFPlayer spielt danach automatisch weiter
-  audioPlayer.playFolder(currentFolder);
+  audioPlayer.playFolder(currentFolder, "HARDWARE_TEST");
 
   logLine("[DF] Folder=" + String(currentFolder));
   logLine("[DF] AutoPlay Folder");
