@@ -733,6 +733,10 @@ Lizenzen externer Bibliotheken und lokal verwendeter Medien bleiben davon unber�
 
 ## Einblicke ins Gerät
 
+<p align="center">
+  <img src="docs/images/image002.png" alt="Höribert 2.0" width="800">
+</p>
+
 Auf dem rechten Bild ist zu sehen, wie die originale NOXON-Platine als mechanische Trägerplatte für den neuen ESP32-Aufbau weiterverwendet wurde.
 
 <p align="center">
