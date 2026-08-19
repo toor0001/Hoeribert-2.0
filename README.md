@@ -32,17 +32,6 @@ Im Normalbetrieb wird derzeit ausschließlich der TonUINO-kompatible Kartenmodus
 | analoges Potentiometer | Lautstärke |
 | IR-Empfänger | Diagnose im Hardware-Testmodus |
 
-### Hinweis zum RC522-Modul
-
-Im Höribert wurde erfolgreich ein blaues RC522-Modul mit der Platinenkennzeichnung **HW-126** eingesetzt. RC522-Module existieren in zahlreichen Platinenvarianten und werden auch mit unterschiedlichen kompatiblen Chips angeboten. Obwohl sie äußerlich nahezu
-identisch aussehen können, unterscheiden sie sich in der Praxis teilweise deutlich bei Lesereichweite und Zuverlässigkeit. Insbesondere die Antennen- und Matching-Beschaltung der Platine kann einen großen Einfluss darauf haben, ob RFID-Karten zuverlässig erkannt werden.
-
-Falls Karten trotz korrekter Verkabelung und Software nicht oder nur aus sehr kurzer Entfernung erkannt werden, empfiehlt es sich daher, ein anderes RC522-Modul zu testen. Die im Projekt getestete Platinenvariante trägt die Kennzeichnung:
-
-**HW-126**
-
-Die Kennzeichnung allein garantiert allerdings weder einen originalen NXP MFRC522 noch eine bestimmte Chiprevision.
-
 ## Pinbelegung
 
 | Funktion | ESP32-Pin |
@@ -154,6 +143,17 @@ Zusätzlich protokolliert der Modus erkannte Tasten, IR-Daten, Lautstärke, RFID
 Unterstützt werden MIFARE Classic sowie MIFARE Ultralight/NTAG in dem vom Projekt gelesenen TonUINO-kompatiblen Kartenformat. Erwartet werden das Cookie `13 37 B3 47`, eine Ordnernummer und eine Modusnummer. Im Normalbetrieb startet eine gültige Karte mit Modus 2 den zugehörigen Ordner.
 
 Bookmarks werden lokal im NVS des ESP32 gespeichert und anhand der Karten-UID zugeordnet. Gespeichert werden Ordner, Track und die vom ESP32 geschätzte Laufzeit. Beim Fortsetzen startet die aktuelle Implementierung den gespeicherten Track von dessen Anfang; sie führt keinen Zeitsprung innerhalb der Audiodatei aus. Ein Bookmark entsteht nur über Taste D oder beim Ablauf des Sleep-Timers. Nach dem natürlichen Ordnerende wird es gelöscht.
+
+### Hinweis zum RC522-Modul
+
+Im Höribert wurde erfolgreich ein blaues RC522-Modul mit der Platinenkennzeichnung **HW-126** eingesetzt. RC522-Module existieren in zahlreichen Platinenvarianten und werden auch mit unterschiedlichen kompatiblen Chips angeboten. Obwohl sie äußerlich nahezu
+identisch aussehen können, unterscheiden sie sich in der Praxis teilweise deutlich bei Lesereichweite und Zuverlässigkeit. Insbesondere die Antennen- und Matching-Beschaltung der Platine kann einen großen Einfluss darauf haben, ob RFID-Karten zuverlässig erkannt werden.
+
+Falls Karten trotz korrekter Verkabelung und Software nicht oder nur aus sehr kurzer Entfernung erkannt werden, empfiehlt es sich daher, ein anderes RC522-Modul zu testen. Die im Projekt getestete Platinenvariante trägt die Kennzeichnung:
+
+**HW-126**
+
+Die Kennzeichnung allein garantiert allerdings weder einen originalen NXP MFRC522 noch eine bestimmte Chiprevision.
 
 ## SD-Karten-Struktur
 
