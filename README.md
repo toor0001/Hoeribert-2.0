@@ -4,9 +4,11 @@
   <img src="docs/images/hoeribert.PNG" alt="Höribert 2.0" width="800">
 </p>
 
-Höribert 2.0 ist ein eigenständiger, ESP32-basierter Hörspiel- und Audioplayer in der Hardware und mit dem Bedienkonzept eines NOXON-Geräts. Diese Geräte wurden vom Hersteller teilweise gebrickt und erhalten so ein neues Leben. Wiederverwenet wird das Frontpanel und der Lautsprecher. Das orginale Display wurde gegen ein Farbdisplay ersetzt, das zufällig genau reinpasst. Die originale Platine des Noxon wurde als "Träger" für den ESP32 Aufbau mit dem Beakout Board verwendet.
+Höribert 2.0 ist ein eigenständiger, ESP32-basierter Hörspiel- und Audioplayer in der Hardware und mit dem Bedienkonzept eines NOXON-Geräts.
 
-RFID-Karten wählen Hörspielordner aus, ein DFPlayer Mini übernimmt die Audiowiedergabe und ein ILI9341-TFT zeigt Statusinformationen oder Coverbilder an. Die vorhandene NOXON-Tastenplatine und der analoge Lautstärkeregler werden weiterverwendet.
+Diese Geräte wurden vom Hersteller teilweise gebrickt und erhalten auf diese Weise ein neues Leben. Wiederverwendet werden das Frontpanel, die Tastenplatine, der analoge Lautstärkeregler und der Lautsprecher. Das originale Display wurde durch ein ILI9341-Farbdisplay ersetzt, das von den Abmessungen her sehr gut in das vorhandene Gehäuse passt. Die originale NOXON-Platine dient weiterhin als mechanische Trägerplatte für den neuen ESP32-Aufbau mit Breakout-Board.
+
+RFID-Karten wählen Hörspielordner aus, ein DFPlayer Mini übernimmt die Audiowiedergabe und das ILI9341-TFT zeigt Statusinformationen oder Coverbilder an.
 
 > **Projektstatus:** Dieses Projekt ist abgeschlossen und wird derzeit nicht aktiv gepflegt. Es wird ohne Anspruch auf Support oder zukünftige Weiterentwicklung bereitgestellt.
 
@@ -14,7 +16,7 @@ RFID-Karten wählen Hörspielordner aus, ein DFPlayer Mini übernimmt die Audiow
 
 - Wiedergabe nummerierter DFPlayer-Ordner über RFID-Karten
 - TonUINO-kompatibles RFID-Kartenformat
-- Album-Modus mit automatischer Wiedergabe aufeinanderfolgender Tracks
+- Album-Modus mit automatischer Folge aufeinanderfolgender Tracks
 - Play/Pause, Stop, nächster und vorheriger Track
 - manuell speicherbare Bookmarks pro RFID-UID
 - automatisches Bookmark beim Ablauf des Sleep-Timers
@@ -197,10 +199,10 @@ Die Ausgabe erfolgt über TFT und serielle Schnittstelle.
 
 ## RFID
 
-Unterstützt werden:
+Unterstützt werden derzeit:
 
-- MIFARE Classic
-- MIFARE Ultralight / NTAG
+- MIFARE Classic 1K / 4K
+- vom MFRC522 als MIFARE Ultralight erkannte Karten, einschließlich kompatibler Ultralight-/NTAG-Varianten
 
 Höribert liest ein zum ursprünglichen TonUINO kompatibles Kartenformat.
 
@@ -222,6 +224,8 @@ Auf der Karte werden unter anderem folgende Werte gespeichert beziehungsweise ge
 | `special2` | zusätzlicher Modusparameter |
 
 Bei MIFARE-Classic-Karten befinden sich diese Daten im **Datenblock 4 des ersten verwendeten Sektors**.
+
+Bei unterstützten MIFARE-Ultralight-/NTAG-Karten liest Höribert die entsprechenden Daten ab Seite 8.
 
 Dadurch können bereits entsprechend beschriebene TonUINO-Karten weiterhin verwendet werden.
 
@@ -246,6 +250,8 @@ Gespeichert werden:
 - vom ESP32 geschätzte Laufzeit
 
 Beim Fortsetzen startet die aktuelle Implementierung den gespeicherten Track **von dessen Anfang**. Es findet kein Zeitsprung zu einer bestimmten Position innerhalb der MP3-Datei statt.
+
+Die gespeicherte Laufzeit dient daher als Information über die zuletzt erreichte Position, nicht als exakte Seek-Position beim Fortsetzen.
 
 Ein Bookmark wird erzeugt:
 
@@ -292,7 +298,7 @@ Dieses Dateisystem ist vollständig unabhängig vom LittleFS-Dateisystem des ESP
 
 ### Verzeichnisstruktur
 
-Die Wiedergabe verwendet den DFPlayer-Befehl:
+Die Wiedergabe verwendet intern den DFPlayer-Befehl:
 
 ```cpp
 playFolder(folder, track)
@@ -324,13 +330,29 @@ Dabei gelten folgende Regeln:
 - Die Nummerierung sollte lückenlos sein.
 - Pro Ordner unterstützt der verwendete DFPlayer-Befehl höchstens 255 Tracks.
 
+### Wiedergabe eines Albums
+
+Bei einer gültigen RFID-Karte im Album-Modus startet Höribert zunächst Track `001` des gewählten Ordners.
+
+Nach jedem vom DFPlayer gemeldeten Track-Ende startet die Firmware den nächsten nummerierten Track:
+
+```text
+001 → 002 → 003 → ...
+```
+
+Dies wird fortgesetzt, bis das Ende des Ordners erreicht ist.
+
+Die Firmware verlässt sich dabei also nicht ausschließlich auf eine autonome Weiterwiedergabe des DFPlayers, sondern verarbeitet dessen Finish-Meldungen und startet den jeweils nächsten Track gezielt selbst.
+
+Einige DFPlayer-Module können unmittelbar hintereinander doppelte Finish-Meldungen für denselben Track senden. Höribert filtert deshalb identische Finish-Ereignisse, die innerhalb eines kurzen Zeitfensters eintreffen. Dadurch wird verhindert, dass versehentlich ein Track übersprungen wird.
+
 ---
 
 ## Wichtig: Dateireihenfolge auf der DFPlayer-SD-Karte
 
-Beim DFPlayer Mini reicht es nicht immer aus, dass die sichtbaren Dateinamen korrekt sortiert sind.
+Der DFPlayer Mini verwendet bei nummerierter Wiedergabe nicht ausschließlich die im Dateimanager sichtbare alphabetische Sortierung.
 
-Neben den Dateinamen kann auch die **Reihenfolge der Verzeichniseinträge im FAT-Dateisystem** eine Rolle spielen.
+Auch die **Reihenfolge der Verzeichniseinträge im FAT-Dateisystem** kann die interne Dateinummerierung beeinflussen.
 
 Dadurch kann beispielsweise eine Datei
 
@@ -344,7 +366,7 @@ intern vor
 001.mp3
 ```
 
-eingeordnet sein, obwohl die Dateinamen im Dateimanager korrekt aussehen.
+eingeordnet sein, obwohl die Dateien im Dateimanager scheinbar korrekt sortiert dargestellt werden.
 
 Mögliche Folgen sind:
 
@@ -511,6 +533,8 @@ Für Ordner 23 entsprechend:
 data/23.jpg
 ```
 
+Ab Ordner 10 ist keine führende Null erforderlich.
+
 Fehlt ein Coverbild, verwendet Höribert automatisch die textbasierte Anzeige.
 
 ### Empfehlungen für Coverbilder
@@ -551,8 +575,8 @@ pio run -e esp32dev_usb -t uploadfs
 Daraus ergibt sich:
 
 ```text
-Code geändert        → Firmware-Upload
-Cover geändert       → LittleFS-Upload
+Code geändert         → Firmware-Upload
+Cover geändert        → LittleFS-Upload
 Code + Cover geändert → beide Uploads
 ```
 
@@ -630,6 +654,12 @@ Für OTA:
 pio run -e esp32dev -t upload
 ```
 
+Die Standardkonfiguration verwendet dabei:
+
+```text
+noxon.local
+```
+
 Falls mDNS im lokalen Netzwerk nicht funktioniert, kann die IP-Adresse explizit angegeben werden:
 
 ```bash
@@ -703,7 +733,7 @@ Lizenzen externer Bibliotheken und lokal verwendeter Medien bleiben davon unber�
 
 ## Einblicke ins Gerät
 
-Auf dem rechten Bild sieht man, das ich die original NOXON Platine als Trägerplatte für den neuen Aufbau genutzt habe.
+Auf dem rechten Bild ist zu sehen, wie die originale NOXON-Platine als mechanische Trägerplatte für den neuen ESP32-Aufbau weiterverwendet wurde.
 
 <p align="center">
   <img src="docs/images/hoeribert-innenraum.jpg" alt="Innenraum des Höribert 2.0 mit Lautsprecher und Elektronik" width="45%">
