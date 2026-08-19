@@ -6,7 +6,7 @@
 
 Höribert 2.0 ist ein eigenständiger, ESP32-basierter Hörspiel- und Audioplayer in der Hardware und mit dem Bedienkonzept eines NOXON-Geräts.
 
-Diese Geräte wurden vom Hersteller teilweise gebrickt und erhalten auf diese Weise ein neues Leben. Wiederverwendet werden das Frontpanel, die Tastenplatine, der analoge Lautstärkeregler und der Lautsprecher. Das originale Display wurde durch ein ILI9341-Farbdisplay ersetzt, das von den Abmessungen her sehr gut in das vorhandene Gehäuse passt. Die originale NOXON-Platine dient weiterhin als mechanische Trägerplatte für den neuen ESP32-Aufbau mit Breakout-Board.
+Diese Geräte wurden vom Hersteller teilweise gebrickt und erhalten auf diese Weise ein neues Leben. Wiederverwendet werden das Frontpanel, die Tastenplatine, der analoge Lautstärkeregler und der Lautsprecher. Das originale Display wurde durch ein ILI9341-Farbdisplay ersetzt (ein Standard-ILI9341-SPI-TFT-Display mit 240x320 Pixeln passte wie angegossen in die vorhandene Aussparung). Die originale NOXON-Platine dient weiterhin als mechanische Trägerplatte für den neuen ESP32-Aufbau mit Breakout-Board.
 
 RFID-Karten wählen Hörspielordner aus, ein DFPlayer Mini übernimmt die Audiowiedergabe und das ILI9341-TFT zeigt Statusinformationen oder Coverbilder an.
 
