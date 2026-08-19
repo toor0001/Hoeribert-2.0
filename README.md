@@ -32,17 +32,16 @@ Im Normalbetrieb wird derzeit ausschließlich der TonUINO-kompatible Kartenmodus
 | analoges Potentiometer | Lautstärke |
 | IR-Empfänger | Diagnose im Hardware-Testmodus |
 
-### Hinweis zum RC522 / MFRC522
+### Hinweis zum RC522-Modul
 
-Bei RC522-Modulen gibt es unterschiedliche Hardware-Revisionen und auch Module mit kompatiblen Clone-Chips. In der Praxis können sich diese Varianten bei Reichweite und Zuverlässigkeit deutlich unterscheiden. Besonders bei günstigen Modulen können Unterschiede in der Antennenabstimmung oder im verwendeten Chip dazu führen, dass bestimmte RFID-Karten nur schlecht oder gar nicht erkannt werden, obwohl die Verdrahtung und Software korrekt sind. Für Höribert empfiehlt sich daher ein Modul mit echtem NXP MFRC522 bzw. ein nachweislich zuverlässig funktionierendes RC522-Modul. Im Hardware-Testmodus kann zusätzlich die Chip-Version ausgelesen werden.
+Im Höribert wurde erfolgreich ein blaues RC522-Modul mit der Platinenkennzeichnung **HW-126** eingesetzt. RC522-Module existieren in zahlreichen Platinenvarianten und werden auch mit unterschiedlichen kompatiblen Chips angeboten. Obwohl sie äußerlich nahezu
+identisch aussehen können, unterscheiden sie sich in der Praxis teilweise deutlich bei Lesereichweite und Zuverlässigkeit. Insbesondere die Antennen- und Matching-Beschaltung der Platine kann einen großen Einfluss darauf haben, ob RFID-Karten zuverlässig erkannt werden.
 
-Typische `VersionReg`-Werte sind beispielsweise:
+Falls Karten trotz korrekter Verkabelung und Software nicht oder nur aus sehr kurzer Entfernung erkannt werden, empfiehlt es sich daher, ein anderes RC522-Modul zu testen. Die im Projekt getestete Platinenvariante trägt die Kennzeichnung:
 
-- `0x91` – MFRC522 Version 1.0
-- `0x92` – MFRC522 Version 2.0
-- `0x88` – häufig Fudan FM17522 / kompatibler Clone
+**HW-126**
 
-Ein abweichender Wert bedeutet nicht automatisch, dass das Modul ungeeignet ist, kann bei RFID-Problemen aber ein wichtiger Hinweis sein.
+Die Kennzeichnung allein garantiert allerdings weder einen originalen NXP MFRC522 noch eine bestimmte Chiprevision.
 
 ## Pinbelegung
 
