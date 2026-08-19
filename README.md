@@ -32,6 +32,18 @@ Im Normalbetrieb wird derzeit ausschließlich der TonUINO-kompatible Kartenmodus
 | analoges Potentiometer | Lautstärke |
 | IR-Empfänger | Diagnose im Hardware-Testmodus |
 
+### Hinweis zum RC522 / MFRC522
+
+Bei RC522-Modulen gibt es unterschiedliche Hardware-Revisionen und auch Module mit kompatiblen Clone-Chips. In der Praxis können sich diese Varianten bei Reichweite und Zuverlässigkeit deutlich unterscheiden. Besonders bei günstigen Modulen können Unterschiede in der Antennenabstimmung oder im verwendeten Chip dazu führen, dass bestimmte RFID-Karten nur schlecht oder gar nicht erkannt werden, obwohl die Verdrahtung und Software korrekt sind. Für Höribert empfiehlt sich daher ein Modul mit echtem NXP MFRC522 bzw. ein nachweislich zuverlässig funktionierendes RC522-Modul. Im Hardware-Testmodus kann zusätzlich die Chip-Version ausgelesen werden.
+
+Typische `VersionReg`-Werte sind beispielsweise:
+
+- `0x91` – MFRC522 Version 1.0
+- `0x92` – MFRC522 Version 2.0
+- `0x88` – häufig Fudan FM17522 / kompatibler Clone
+
+Ein abweichender Wert bedeutet nicht automatisch, dass das Modul ungeeignet ist, kann bei RFID-Problemen aber ein wichtiger Hinweis sein.
+
 ## Pinbelegung
 
 | Funktion | ESP32-Pin |
