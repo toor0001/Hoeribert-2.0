@@ -144,6 +144,24 @@ Unterstützt werden MIFARE Classic sowie MIFARE Ultralight/NTAG in dem vom Proje
 
 Bookmarks werden lokal im NVS des ESP32 gespeichert und anhand der Karten-UID zugeordnet. Gespeichert werden Ordner, Track und die vom ESP32 geschätzte Laufzeit. Beim Fortsetzen startet die aktuelle Implementierung den gespeicherten Track von dessen Anfang; sie führt keinen Zeitsprung innerhalb der Audiodatei aus. Ein Bookmark entsteht nur über Taste D oder beim Ablauf des Sleep-Timers. Nach dem natürlichen Ordnerende wird es gelöscht.
 
+### RFID-Kartenformat
+
+Höribert verwendet ein zum ursprünglichen TonUINO kompatibles RFID-Kartenformat. Auf der Karte werden unter anderem folgende Werte gespeichert bzw. gelesen:
+
+- Magic Cookie `13 37 B3 47`
+- Version
+- Ordnernummer (`folder`)
+- Wiedergabemodus (`mode`)
+- `special`
+- `special2`
+
+Bei MIFARE-Classic-Karten liegen diese Daten im Datenblock 4 des ersten benutzten Sektors. Höribert liest dieses Format, damit bereits vorhandene TonUINO-Karten weiterverwendet werden können. Das Kartenformat und die ursprüngliche Implementierung stammen aus dem
+historischen TonUINO-Projekt von Thorsten Voß:
+
+https://github.com/tonuino/TonUINO
+
+Die aktuelle Höribert-Implementierung besitzt eine eigene RFID- und Anwendungslogik und verwendet lediglich das kompatible Kartenformat.
+
 ### Hinweis zum RC522-Modul
 
 Im Höribert wurde erfolgreich ein blaues RC522-Modul mit der Platinenkennzeichnung **HW-126** eingesetzt. RC522-Module existieren in zahlreichen Platinenvarianten und werden auch mit unterschiedlichen kompatiblen Chips angeboten. Obwohl sie äußerlich nahezu
