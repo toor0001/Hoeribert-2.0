@@ -4,12 +4,11 @@
   <img src="docs/images/hoeribert.PNG" alt="Höribert 2.0" width="800">
 </p>
 
-Höribert 2.0 ist ein eigenständiger, ESP32-basierter Hörspiel- und Audioplayer in der Hardware und mit dem Bedienkonzept eines NOXON-Geräts.
+Höribert 2.0 ist ein eigenständiger, ESP32-basierter Hörspiel- und Audioplayer in der Hardware und mit dem Bedienkonzept eines NOXON-Geräts. Diese Geräte wurden vom Hersteller teilweise gebrickt und erhalten so ein neues Leben. Wiederverwenet wird das Frontpanel und der Lautsprecher. Das orginale Display wurde gegen ein Farbdisplay ersetzt, das zufällig genau reinpasst. Die originale Platine des Noxon wurde als "Träger" für den ESP32 Aufbau mit dem Beakout Board verwendet.
 
 RFID-Karten wählen Hörspielordner aus, ein DFPlayer Mini übernimmt die Audiowiedergabe und ein ILI9341-TFT zeigt Statusinformationen oder Coverbilder an. Die vorhandene NOXON-Tastenplatine und der analoge Lautstärkeregler werden weiterverwendet.
 
-> **Projektstatus:** Dieses Projekt ist abgeschlossen und wird derzeit nicht aktiv gepflegt.  
-> Es wird ohne Anspruch auf Support oder zukünftige Weiterentwicklung bereitgestellt.
+> **Projektstatus:** Dieses Projekt ist abgeschlossen und wird derzeit nicht aktiv gepflegt. Es wird ohne Anspruch auf Support oder zukünftige Weiterentwicklung bereitgestellt.
 
 ## Funktionen
 
@@ -703,6 +702,8 @@ Lizenzen externer Bibliotheken und lokal verwendeter Medien bleiben davon unber�
 ---
 
 ## Einblicke ins Gerät
+
+Auf dem rechten Bild sieht man, das ich die original NOXON Platine als Trägerplatte für den neuen Aufbau genutzt habe.
 
 <p align="center">
   <img src="docs/images/hoeribert-innenraum.jpg" alt="Innenraum des Höribert 2.0 mit Lautsprecher und Elektronik" width="45%">
