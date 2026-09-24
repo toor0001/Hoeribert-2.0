@@ -5,6 +5,7 @@ bool AudioPlayer::begin() {
   delay(500);
 
   ready = dfPlayer.begin(dfSerial);
+  singleTrackPlayback = false;
   playing = false;
   folderPlaybackActive = false;
   folderFinished = false;
@@ -98,6 +99,7 @@ bool AudioPlayer::isPlayingNow() const {
 
 void AudioPlayer::playFolder(uint8_t folder, const char* source) {
   if (!ready) return;
+  singleTrackPlayback = false;
 
   resetFinishHistory();
   folderFinished = false;
@@ -112,6 +114,7 @@ void AudioPlayer::playFolder(uint8_t folder, const char* source) {
 
 void AudioPlayer::playFolderTrack(uint8_t folder, uint8_t track, const char* source) {
   if (!ready) return;
+  singleTrackPlayback = false;
 
   resetFinishHistory();
   folderFinished = false;
@@ -121,6 +124,17 @@ void AudioPlayer::playFolderTrack(uint8_t folder, uint8_t track, const char* sou
   }
 
   folderPlaybackActive = true;
+  startFolderTrack(folder, track, source);
+}
+
+void AudioPlayer::playSingleTrack(uint8_t folder, uint8_t track, const char* source) {
+  if (!ready || folder == 0 || track == 0) return;
+
+  resetFinishHistory();
+  singleTrackPlayback = true;
+  folderFinished = false;
+  folderPlaybackActive = true;
+  tracksInFolder = 0;
   startFolderTrack(folder, track, source);
 }
 
@@ -167,7 +181,7 @@ void AudioPlayer::pause() {
 }
 
 void AudioPlayer::resume() {
-  if (!ready) return;
+  if (!ready || (singleTrackPlayback && !folderPlaybackActive)) return;
 
   dfPlayer.start();
   playing = true;
@@ -175,7 +189,8 @@ void AudioPlayer::resume() {
 }
 
 void AudioPlayer::next() {
-  if (!ready) return;
+  // Keep the single-file boundary even after completion or Stop.
+  if (!ready || singleTrackPlayback) return;
 
   resetFinishHistory();
   if (folderPlaybackActive && currentFolder > 0 && currentTrack > 0) {
@@ -195,7 +210,8 @@ void AudioPlayer::next() {
 }
 
 void AudioPlayer::previous() {
-  if (!ready) return;
+  // Keep the single-file boundary even after completion or Stop.
+  if (!ready || singleTrackPlayback) return;
 
   resetFinishHistory();
   if (folderPlaybackActive && currentFolder > 0 && currentTrack > 1) {
@@ -283,12 +299,12 @@ void AudioPlayer::handlePlayFinished() {
     return;
   }
 
-  if (tracksInFolder == 0 && currentTrack < 255) {
+  if (!singleTrackPlayback && tracksInFolder == 0 && currentTrack < 255) {
     startFolderTrack(currentFolder, currentTrack + 1, "FINISH_EVENT");
     return;
   }
 
-  if (tracksInFolder > 0 && currentTrack < tracksInFolder) {
+  if (!singleTrackPlayback && tracksInFolder > 0 && currentTrack < tracksInFolder) {
     startFolderTrack(currentFolder, currentTrack + 1, "FINISH_EVENT");
     return;
   }

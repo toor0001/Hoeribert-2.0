@@ -16,11 +16,11 @@ bool jpgOutput(int16_t x, int16_t y, uint16_t w, uint16_t h, uint16_t* bitmap) {
   return true;
 }
 
-String folderImagePath(uint8_t folder) {
+String folderImagePath(uint16_t folder) {
   return "/" + String(folder) + ".jpg";
 }
 
-String paddedFolderImagePath(uint8_t folder) {
+String paddedFolderImagePath(uint16_t folder) {
   if (folder >= 10) return folderImagePath(folder);
   return "/0" + String(folder) + ".jpg";
 }
@@ -79,11 +79,11 @@ void DisplayManager::showNormalIdle() {
   tft.println("Album-Karten werden automatisch gespielt");
 }
 
-void DisplayManager::showFolderPlaying(uint8_t folder) {
+void DisplayManager::showFolderPlaying(uint16_t folder) {
   showFolderPlaying(folder, "");
 }
 
-void DisplayManager::showFolderPlaying(uint8_t folder, const String& title) {
+void DisplayManager::showFolderPlaying(uint16_t folder, const String& title) {
   if (!enabled) return;
 
   clear();
@@ -141,7 +141,7 @@ void DisplayManager::showFolderPlaying(uint8_t folder, const String& title) {
 
 }
 
-bool DisplayManager::showFolderImage(uint8_t folder) {
+bool DisplayManager::showFolderImage(uint16_t folder) {
   if (!enabled || !imageFileSystemReady) return false;
 
   String path = folderImagePath(folder);
@@ -161,8 +161,7 @@ bool DisplayManager::showFolderImage(uint8_t folder) {
     imageX = (tft.width() - imageWidth) / 2;
   }
 
-  TJpgDec.drawFsJpg(imageX, 0, path, LittleFS);
-  return true;
+  return TJpgDec.drawFsJpg(imageX, 0, path, LittleFS) == JDR_OK;
 }
 
 void DisplayManager::showBookmarkStatus(bool hasBookmark, uint8_t track, uint16_t seconds) {
@@ -350,6 +349,23 @@ void DisplayManager::drawCardProgrammingScreen(uint16_t episode, const String& s
 }
 
 void DisplayManager::showCardProgrammingWaiting(uint16_t episode) {
+  if (showFolderImage(episode)) {
+    // A compact footer leaves most of the cover visible on the 320x240 display.
+    constexpr int footerHeight = 44;
+    const int footerY = tft.height() - footerHeight;
+    tft.fillRect(0, footerY, tft.width(), footerHeight, ILI9341_BLACK);
+    tft.setTextSize(2);
+    tft.setTextColor(ILI9341_YELLOW, ILI9341_BLACK);
+    tft.setCursor(18, footerY + 3);
+    tft.print("FOLGE ");
+    tft.print(episode);
+    tft.setTextColor(ILI9341_CYAN, ILI9341_BLACK);
+    tft.setCursor(18, footerY + 24);
+    tft.print("KARTE EINLEGEN");
+    return;
+  }
+
+  // Also clears any partially rendered image when JPEG decoding fails.
   drawCardProgrammingScreen(episode, "EINLEGEN", "", ILI9341_CYAN);
 }
 

@@ -501,7 +501,8 @@ Hoeribert-2.0/
 └── platformio.ini
 ```
 
-Die Zahl im Dateinamen entspricht der Ordnernummer des Hörspiels.
+Die Zahl im Dateinamen entspricht der logischen Folgennummer des Hörspiels.
+Bei virtuellen Folgen ist dies nicht die physische DFPlayer-Ordnernummer 99.
 
 Für Ordner 1 sucht die Firmware beispielsweise zunächst nach:
 
@@ -536,6 +537,39 @@ data/23.jpg
 Ab Ordner 10 ist keine führende Null erforderlich.
 
 Fehlt ein Coverbild, verwendet Höribert automatisch die textbasierte Anzeige.
+
+### Virtuelle Folgen ab 99
+
+Karten mit `folder=99, mode=8` speichern die Folgennummer als
+`special | (special2 << 8)`. Die feste Zuordnung in
+`src/modes/VirtualEpisodes.h` bestimmt die einzelne MP3-Datei in `/99/`
+auf der DFPlayer-SD. Auch alte Karten mit `folder=99, mode=2` spielen nur
+`/99/001.mp3` (Folge 99). Nicht zugeordnete Folgen werden abgewiesen.
+
+Eine Datei ist eine vollständige Folge: Dateiende beendet die Wiedergabe;
+Vor/Zurück sind für diese Wiedergabe ohne Funktion, auch nach Ende/Stop.
+Pause/Fortsetzen bleibt während der Folge möglich. Legacy-Ordner 1–98
+behalten ihre bisherige Titelweiterschaltung.
+
+Cover bleiben im ESP32-LittleFS, im Wurzelverzeichnis als `/<Folge>.jpg`.
+Aus `/media/MacHDD/DDF_AUFBEREITET/Cover_Quadrat/` werden die folgenden
+Dateien lokal unter `data/` benötigt, anschließend ist ein separater
+LittleFS-Upload erforderlich (nicht auf die DFPlayer-SD kopieren):
+
+```text
+99.jpg 100.jpg 101.jpg 102.jpg 103.jpg 104.jpg 105.jpg 106.jpg
+108.jpg 109.jpg 110.jpg 111.jpg 119.jpg 121.jpg 122.jpg 123.jpg
+124.jpg 125.jpg 126.jpg 127.jpg 128.jpg 130.jpg 132.jpg 133.jpg
+134.jpg 135.jpg 137.jpg 138.jpg 139.jpg 140.jpg 142.jpg 143.jpg
+148.jpg 153.jpg 154.jpg 155.jpg 160.jpg 161.jpg 162.jpg 165.jpg
+170.jpg 171.jpg 175.jpg 179.jpg 180.jpg 999.jpg
+```
+
+Der verwendete TJpg_Decoder benötigt 24-Bit-JPEG ohne Progressive-Encoding.
+Der Code erzwingt keine Bildauflösung und skaliert nicht automatisch.
+Das Display hat im Querformat 320 × 240 Pixel; für quadratische Cover
+passen 240 × 240 Pixel, kleinere Bilder werden horizontal zentriert.
+Größere Bilder werden nicht automatisch passend verkleinert.
 
 ### Empfehlungen für Coverbilder
 

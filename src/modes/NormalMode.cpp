@@ -1,4 +1,5 @@
 #include "NormalMode.h"
+#include "VirtualEpisodes.h"
 
 #include "hardware/AudioPlayer.h"
 #include "hardware/ButtonBoard.h"
@@ -17,7 +18,7 @@ constexpr int VOL_RAW_MIN = 40;
 constexpr int VOL_RAW_MAX = 4050;
 constexpr int VOL_MAX = 24;
 
-const char* folderTitle(uint8_t folder) {
+const char* folderTitle(uint16_t folder) {
   switch (folder) {
       case 1: return "Der Super-Papagei";
       case 2: return "Der Phantomsee";
@@ -129,6 +130,8 @@ AudioPlayer audioPlayer;
 Preferences bookmarkPrefs;
 
 uint8_t currentFolder = 0;
+uint16_t logicalEpisode = 0;
+bool isVirtualEpisode = false;
 int lastVolume = -1;
 int filteredVolumeRaw = -1;
 bool preferCoverDisplay = true;
@@ -194,12 +197,14 @@ void disableWifi() {
 }
 
 void showCurrentFolderDisplay() {
-  if (preferCoverDisplay && display.showFolderImage(currentFolder)) {
+  if (preferCoverDisplay && display.showFolderImage(logicalEpisode)) {
     return;
   }
 
-  display.showFolderPlaying(currentFolder, folderTitle(currentFolder));
-  display.showBookmarkStatus(activeBookmarkValid, activeBookmarkTrack, activeBookmarkSeconds);
+  display.showFolderPlaying(logicalEpisode, folderTitle(logicalEpisode));
+  if (!isVirtualEpisode) {
+    display.showBookmarkStatus(activeBookmarkValid, activeBookmarkTrack, activeBookmarkSeconds);
+  }
 }
 
 void redrawNormalDisplay() {
@@ -290,7 +295,7 @@ void rememberDisplayedBookmark(bool valid, uint8_t track, uint16_t seconds) {
   activeBookmarkTrack = valid ? track : 0;
   activeBookmarkSeconds = valid ? seconds : 0;
 
-  if (currentFolder > 0 && !preferCoverDisplay) {
+  if (currentFolder > 0 && !preferCoverDisplay && !isVirtualEpisode) {
     display.showBookmarkStatus(activeBookmarkValid, activeBookmarkTrack, activeBookmarkSeconds);
   }
 }
@@ -460,7 +465,8 @@ void handleButtons() {
     if (writeCurrentBookmark("Taste D")) {
       showTemporaryNotification(
         "BOOKMARK",
-        "Titel " + formatTrack(activeBookmarkTrack) + "  Zeit " + formatTime(activeBookmarkSeconds)
+        (isVirtualEpisode ? "Folge " + String(logicalEpisode) : "Titel " + formatTrack(activeBookmarkTrack)) +
+        "  Zeit " + formatTime(activeBookmarkSeconds)
       );
     } else {
       showBookmarkError("keine Wiedergabe");
@@ -516,7 +522,21 @@ void handleRFID() {
     return;
   }
 
-  if (card.mode != 2) {
+  const bool virtualCard = card.mode == 8 && card.folder == VirtualEpisodes::PHYSICAL_FOLDER;
+  const bool legacy99 = card.mode == 2 && card.folder == VirtualEpisodes::PHYSICAL_FOLDER;
+  const bool singleEpisode = virtualCard || legacy99;
+  uint16_t episode = card.folder;
+  uint8_t virtualTrack = 0;
+  if (virtualCard) {
+    episode = uint16_t(card.special) | (uint16_t(card.special2) << 8);
+  }
+  if (singleEpisode && !VirtualEpisodes::mapToTrack(episode, virtualTrack)) {
+    Serial.printf("[VIRTUAL] unmapped episode=%u\n", episode);
+    display.showCardProblem("FOLGE " + String(episode) + " FEHLT");
+    return;
+  }
+
+  if (card.mode != 2 && !virtualCard) {
     display.showCardProblem("MODUS " + String(card.mode));
     Serial.println("[NORMAL] Nicht unterstuetzter Modus: " + String(card.mode));
     return;
@@ -534,14 +554,27 @@ void handleRFID() {
 
   activeCardUid = card.uid;
   currentFolder = card.folder;
+  logicalEpisode = episode;
+  isVirtualEpisode = singleEpisode;
   CardBookmark localBookmark;
   bool hasLocalBookmark = loadLocalBookmark(card.uid, card.folder, localBookmark);
-  bool hasBookmark = hasLocalBookmark;
+  // A reprogrammed UID or old folder-99 bookmark must never select another episode.
+  bool hasBookmark = hasLocalBookmark &&
+      (!isVirtualEpisode || localBookmark.track == virtualTrack);
   uint8_t startTrack = localBookmark.track;
   uint16_t startSeconds = localBookmark.seconds;
   rememberDisplayedBookmark(hasBookmark, startTrack, startSeconds);
 
-  if (hasBookmark) {
+  if (isVirtualEpisode) {
+    if (legacy99) {
+      Serial.println("[VIRTUAL] legacy episode 99 -> folder=99 track=1");
+    } else {
+      Serial.printf("[VIRTUAL] card episode=%u\n", logicalEpisode);
+      Serial.printf("[VIRTUAL] episode=%u -> folder=%u track=%u\n",
+                    logicalEpisode, currentFolder, virtualTrack);
+    }
+    audioPlayer.playSingleTrack(currentFolder, virtualTrack);
+  } else if (hasBookmark) {
     audioPlayer.playFolderTrack(currentFolder, startTrack, "BOOKMARK");
     Serial.println("[NORMAL] Spiele Ordner " + String(currentFolder) +
                    " ab Bookmark Track " + String(startTrack) +
@@ -564,6 +597,10 @@ void handleFolderFinished() {
     return;
   }
 
+  if (isVirtualEpisode) {
+    Serial.printf("[VIRTUAL] finished episode=%u track=%u\n",
+                  logicalEpisode, audioPlayer.getPlaybackPosition().track);
+  }
   clearCurrentBookmark("Ordnerende");
   currentFolder = 0;
   display.showNormalIdle();

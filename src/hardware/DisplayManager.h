@@ -15,9 +15,9 @@ public:
   void showCardProgrammingError(uint16_t episode, const String& message);
   void showCardProgrammingWriting(uint16_t episode);
   void showCardProgrammingRemoval(uint16_t episode);
-  void showFolderPlaying(uint8_t folder);
-  void showFolderPlaying(uint8_t folder, const String& title);
-  bool showFolderImage(uint8_t folder);
+  void showFolderPlaying(uint16_t folder);
+  void showFolderPlaying(uint16_t folder, const String& title);
+  bool showFolderImage(uint16_t folder);
   void showBookmarkStatus(bool hasBookmark, uint8_t track = 0, uint16_t seconds = 0);
   void showNotification(const String& title, const String& detail = "");
   void showCardProblem(const String& text);
