@@ -323,3 +323,54 @@ void DisplayManager::drawPlayingHeader() {
   tft.setCursor(10, 9);
   tft.println("SPIELT");
 }
+
+void DisplayManager::drawCardProgrammingScreen(uint16_t episode, const String& status,
+                                                const String& detail, uint16_t color) {
+  if (!enabled) return;
+  clear();
+  tft.fillRect(0, 0, tft.width(), 34, ILI9341_DARKCYAN);
+  tft.setTextColor(ILI9341_WHITE, ILI9341_DARKCYAN);
+  tft.setTextSize(2);
+  tft.setCursor(10, 9);
+  tft.print("KARTE FUER");
+  tft.setTextColor(ILI9341_YELLOW, ILI9341_BLACK);
+  tft.setTextSize(3);
+  tft.setCursor(18, 56);
+  if (episode != 0) {
+    tft.print("FOLGE ");
+    tft.print(episode);
+  }
+  tft.setTextColor(color, ILI9341_BLACK);
+  tft.setTextSize(2);
+  tft.setCursor(18, 108);
+  tft.print(status);
+  tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
+  tft.setCursor(18, 144);
+  tft.print(detail);
+}
+
+void DisplayManager::showCardProgrammingWaiting(uint16_t episode) {
+  drawCardProgrammingScreen(episode, "EINLEGEN", "", ILI9341_CYAN);
+}
+
+void DisplayManager::showCardProgrammingSuccess(uint16_t episode) {
+  drawCardProgrammingScreen(episode, "OK", "", ILI9341_GREEN);
+}
+
+void DisplayManager::showCardProgrammingError(uint16_t episode, const String& message) {
+  drawCardProgrammingScreen(episode, "FEHLER", "Karte entfernen", ILI9341_RED);
+  if (!enabled) return;
+  tft.setCursor(18, 172);
+  tft.print("Erneut versuchen");
+  tft.setTextSize(1);
+  tft.setCursor(18, 208);
+  tft.print(message);
+}
+
+void DisplayManager::showCardProgrammingWriting(uint16_t episode) {
+  drawCardProgrammingScreen(episode, "SCHREIBE...", "", ILI9341_CYAN);
+}
+
+void DisplayManager::showCardProgrammingRemoval(uint16_t episode) {
+  drawCardProgrammingScreen(episode, "ENTFERNEN", "", ILI9341_GREEN);
+}

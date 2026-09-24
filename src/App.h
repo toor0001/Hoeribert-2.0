@@ -4,6 +4,7 @@
 
 #include "hardware/ButtonBoard.h"
 #include "modes/HardwareTestMode.h"
+#include "modes/CardProgrammingMode.h"
 #include "modes/NormalMode.h"
 
 class App {
@@ -14,13 +15,15 @@ public:
 private:
   enum class Mode {
     Normal,
+    CardProgramming,
     HardwareTest,
   };
 
-  bool shouldStartHardwareTest() const;
+  Mode selectBootMode() const;
 
   Mode activeMode = Mode::Normal;
   ButtonBoard bootButtons;
+  CardProgrammingMode cardProgrammingMode;
   HardwareTestMode hardwareTestMode;
   NormalMode normalMode;
 };

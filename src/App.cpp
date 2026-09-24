@@ -8,9 +8,11 @@ void App::begin() {
 
   bootButtons.begin();
 
-  activeMode = shouldStartHardwareTest() ? Mode::HardwareTest : Mode::Normal;
+  activeMode = selectBootMode();
 
-  if (activeMode == Mode::HardwareTest) {
+  if (activeMode == Mode::CardProgramming) {
+    cardProgrammingMode.begin();
+  } else if (activeMode == Mode::HardwareTest) {
     hardwareTestMode.begin();
   } else {
     normalMode.begin();
@@ -18,13 +20,18 @@ void App::begin() {
 }
 
 void App::update() {
-  if (activeMode == Mode::HardwareTest) {
+  if (activeMode == Mode::CardProgramming) {
+    cardProgrammingMode.update();
+  } else if (activeMode == Mode::HardwareTest) {
     hardwareTestMode.update();
   } else {
     normalMode.update();
   }
 }
 
-bool App::shouldStartHardwareTest() const {
-  return bootButtons.isHeld(ButtonBoard::BTN_J);
+App::Mode App::selectBootMode() const {
+  // DISP has priority, including when both boot buttons are held.
+  if (bootButtons.isHeld(ButtonBoard::BTN_B)) return Mode::CardProgramming;
+  if (bootButtons.isHeld(ButtonBoard::BTN_J)) return Mode::HardwareTest;
+  return Mode::Normal;
 }

@@ -10,6 +10,11 @@ public:
   void showBootScreen();
   void showHardwareTestScreen();
   void showNormalIdle();
+  void showCardProgrammingWaiting(uint16_t episode);
+  void showCardProgrammingSuccess(uint16_t episode);
+  void showCardProgrammingError(uint16_t episode, const String& message);
+  void showCardProgrammingWriting(uint16_t episode);
+  void showCardProgrammingRemoval(uint16_t episode);
   void showFolderPlaying(uint8_t folder);
   void showFolderPlaying(uint8_t folder, const String& title);
   bool showFolderImage(uint8_t folder);
@@ -36,4 +41,6 @@ private:
   bool imageFileSystemReady = false;
 
   void drawPlayingHeader();
+  void drawCardProgrammingScreen(uint16_t episode, const String& status,
+                                 const String& detail, uint16_t color);
 };

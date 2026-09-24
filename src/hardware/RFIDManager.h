@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <MFRC522.h>
+#include <functional>
 
 struct RfidCardData {
   bool valid = false;
@@ -25,6 +26,12 @@ class RFIDManager {
 public:
   void begin();
   bool update();
+  // Programming-only API; normal reading and its reporting cadence stay unchanged.
+  enum class WriteResult { NoCard, Success, Error };
+  static RfidCardData makeCardDataForEpisode(uint16_t episode);
+  WriteResult writeEpisodeCard(uint16_t episode, String& error,
+                               const std::function<void()>& onWriting);
+  bool isProgrammingFieldEmpty();
   bool isCardPresent() const;
   RfidCardData readRfidCard() const;
   String getLastUid() const;

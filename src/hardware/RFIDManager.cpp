@@ -296,3 +296,82 @@ void RFIDManager::finishCard() {
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
 }
+
+RfidCardData RFIDManager::makeCardDataForEpisode(uint16_t episode) {
+  RfidCardData card;
+  if (episode < 1 || episode > 999) return card;
+  card.valid = true;
+  card.version = 1;
+  card.folder = episode < 99 ? episode : 99;
+  card.mode = episode < 99 ? 2 : 8;
+  if (episode >= 99) {
+    card.special = episode & 0xFF;
+    card.special2 = (episode >> 8) & 0xFF;
+  }
+  return card;
+}
+
+RFIDManager::WriteResult RFIDManager::writeEpisodeCard(
+    uint16_t episode, String& error, const std::function<void()>& onWriting) {
+  error = "";
+  auto fail = [&](const String& message) {
+    error = message;
+    finishCard();
+    return WriteResult::Error;
+  };
+  const auto card = makeCardDataForEpisode(episode);
+  if (!card.valid) return fail("Invalid episode");
+
+  rfid.PCD_StopCrypto1();
+  byte atqa[2];
+  byte atqaSize = sizeof(atqa);
+  auto status = rfid.PICC_WakeupA(atqa, &atqaSize);
+  if (status == MFRC522::STATUS_TIMEOUT) return WriteResult::NoCard;
+  if (status != MFRC522::STATUS_OK) return fail("Card detection failed");
+  if (!rfid.PICC_ReadCardSerial()) return fail("Card selection failed");
+
+  if (onWriting) onWriting();
+  Serial.println("[CARDPROG] Karte erkannt UID " + uidToString(&rfid.uid));
+  auto type = rfid.PICC_GetType(rfid.uid.sak);
+  if (type != MFRC522::PICC_TYPE_MIFARE_1K && type != MFRC522::PICC_TYPE_MIFARE_4K) {
+    return fail("Only MIFARE Classic 1K/4K");
+  }
+
+  constexpr byte block = 4;
+  status = rfid.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A,
+                                block, &rfidKey, &rfid.uid);
+  if (status != MFRC522::STATUS_OK) return fail("Authentication failed");
+
+  byte data[RAW_DATA_LENGTH] = {0x13, 0x37, 0xB3, 0x47, card.version,
+                               card.folder, card.mode, card.special, card.special2};
+  Serial.println("[CARDPROG] Schreibe Block 4");
+  status = rfid.MIFARE_Write(block, data, sizeof(data));
+  if (status != MFRC522::STATUS_OK) return fail("Write failed");
+
+  byte readback[BUFFER_LENGTH] = {};
+  byte size = sizeof(readback);
+  status = rfid.MIFARE_Read(block, readback, &size);
+  if (status != MFRC522::STATUS_OK) return fail("Verify read failed");
+  if (size < RAW_DATA_LENGTH) return fail("Verify length failed");
+  for (byte i = 0; i < sizeof(data); ++i) {
+    if (readback[i] != data[i]) return fail("Verification failed");
+  }
+
+  finishCard();
+  Serial.println("[CARDPROG] Verify OK");
+  return WriteResult::Success;
+}
+
+bool RFIDManager::isProgrammingFieldEmpty() {
+  rfid.PCD_StopCrypto1();
+  byte atqa[2];
+  byte size = sizeof(atqa);
+  // REQA alone cannot detect a card halted after writing. Wake it each time.
+  auto status = rfid.PICC_WakeupA(atqa, &size);
+  if (status == MFRC522::STATUS_TIMEOUT) return true;
+  // Selection prepares the responding card for HALT and the next WUPA probe.
+  // Collisions/communication errors are never evidence of an empty field.
+  rfid.PICC_ReadCardSerial();
+  finishCard();
+  return false;
+}
